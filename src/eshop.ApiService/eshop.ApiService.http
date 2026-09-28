@@ -1,4 +1,5 @@
 @ApiService_HostAddress = http://localhost:5375
+@cartId = {{$guid}}
 
 ### Get all products
 GET {{ApiService_HostAddress}}/api/products
@@ -77,3 +78,45 @@ Accept: application/json
 
 ### Delete an order
 DELETE {{ApiService_HostAddress}}/api/orders/2
+
+### =========================================
+### CHECKOUT WORKFLOW INTEGRATION TEST
+### =========================================
+
+### 1. Create/Retrieve Cart
+# @name CreateCart
+GET {{ApiService_HostAddress}}/api/cart/{{cartId}}
+Accept: application/json
+
+### 2. Add Product into Cart
+# @name AddProduct
+POST {{ApiService_HostAddress}}/api/cart/{{cartId}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "productId": 1,
+  "quantity": 2
+}
+
+### 3. Execute Checkout Process
+# @name Checkout
+POST {{ApiService_HostAddress}}/api/cart/{{cartId}}/checkout
+Content-Type: application/json
+Accept: application/json
+
+{
+  "customerName": "Alice Testing",
+  "customerEmail": "alice@example.com"
+}
+
+### 4. Validate Cart is Cleared
+# @name VerifyCartCleared
+GET {{ApiService_HostAddress}}/api/cart/{{cartId}}
+Accept: application/json
+
+### 5. Validate Order Created
+# @name VerifyOrder
+# Extracts the created order ID directly from the previous response body (Visual Studio syntax)
+GET {{ApiService_HostAddress}}/api/orders/{{Checkout.response.body.$.id}}
+Accept: application/json
