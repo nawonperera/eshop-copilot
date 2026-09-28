@@ -1,0 +1,150 @@
+@page "/cart"
+@rendermode InteractiveServer
+@inject ShopApiClient ShopApi
+@inject NavigationManager Navigation
+
+<PageTitle>Shopping Cart — eShop</PageTitle>
+
+<section class="page-section">
+    <header class="page-header">
+        <div>
+            <h1>Shopping Cart</h1>
+            <p class="page-subtitle">Review your items before checkout</p>
+        </div>
+        <a href="/" class="btn-secondary">← Continue Shopping</a>
+    </header>
+
+    @if (cart == null)
+    {
+        <div class="skeleton-table">
+            @for (var i = 0; i < 3; i++)
+            {
+                <div class="skeleton-row">
+                    <div class="skeleton-cell skeleton-cell-md"></div>
+                    <div class="skeleton-cell skeleton-cell-sm"></div>
+                    <div class="skeleton-cell skeleton-cell-sm"></div>
+                    <div class="skeleton-cell skeleton-cell-sm"></div>
+                </div>
+            }
+        </div>
+    }
+    else if (!cart.Items.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#8c9196" stroke-width="1.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            </div>
+            <h3>Your cart is empty</h3>
+            <p>Add some products to get started!</p>
+            <a href="/" class="btn-primary">Browse Products</a>
+        </div>
+    }
+    else
+    {
+        @if (orderId != null)
+        {
+            <div class="alert-success-custom">
+                <span>✅</span>
+                <span>Order placed successfully! <strong>Order #@orderId</strong> — <a href="/orders/@orderId">View order details →</a></span>
+            </div>
+        }
+        else
+        {
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Unit Price</th>
+                            <th>Quantity</th>
+                            <th>Subtotal</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in cart.Items)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="text-bold">@item.ProductName</span>
+                                </td>
+                                <td>$@item.UnitPrice.ToString("N2")</td>
+                                <td>@item.Quantity</td>
+                                <td class="text-bold">$@((item.UnitPrice * item.Quantity).ToString("N2"))</td>
+                                <td>
+                                    <button class="btn-danger" @onclick="() => RemoveItem(item.ProductId)">
+                                        Remove
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="3" class="text-end">Total</td>
+                            <td class="text-bold text-primary">$@cart.Items.Sum(i => i.UnitPrice * i.Quantity).ToString("N2")</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div class="cart-summary mt-lg">
+                <h3 class="card-section-title">Checkout</h3>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Name</label>
+                        <input class="form-control" @bind="customerName" placeholder="Your full name" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <input class="form-control" type="email" @bind="customerEmail" placeholder="you@example.com" />
+                    </div>
+                </div>
+                <div class="cart-total">
+                    <span class="cart-total-label">Order Total</span>
+                    <span class="cart-total-value">$@cart.Items.Sum(i => i.UnitPrice * i.Quantity).ToString("N2")</span>
+                </div>
+                <div style="margin-top: 1.5rem;">
+                    <button class="btn-success btn-lg" style="width: 100%;" @onclick="Checkout" disabled="@(string.IsNullOrWhiteSpace(customerName) || string.IsNullOrWhiteSpace(customerEmail))">
+                        Complete Checkout
+                    </button>
+                </div>
+            </div>
+        }
+    }
+</section>
+
+@code {
+    private ShoppingCart? cart;
+    private string cartId = "default";
+    private string customerName = "";
+    private string customerEmail = "";
+    private int? orderId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCart();
+    }
+
+    private async Task LoadCart()
+    {
+        cart = await ShopApi.GetCartAsync(cartId);
+    }
+
+    private async Task RemoveItem(int productId)
+    {
+        await ShopApi.RemoveFromCartAsync(cartId, productId);
+        await LoadCart();
+    }
+
+    private async Task Checkout()
+    {
+        var order = await ShopApi.CheckoutAsync(cartId, customerName, customerEmail);
+        if (order != null)
+        {
+            orderId = order.Id;
+            cart = null;
+        }
+    }
+}

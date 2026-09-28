@@ -1,0 +1,100 @@
+@page "/orders"
+@rendermode InteractiveServer
+@using eshop.Web.Models
+@using eshop.Web.Clients
+@inject OrderApiClient OrderApi
+@inject NavigationManager Navigation
+
+<PageTitle>Orders — eShop</PageTitle>
+
+<section class="page-section">
+    <header class="page-header">
+        <div>
+            <h1>Orders</h1>
+            <p class="page-subtitle">Track and manage all customer orders</p>
+        </div>
+    </header>
+
+    @if (orders == null)
+    {
+        <div class="skeleton-table">
+            @for (var i = 0; i < 4; i++)
+            {
+                <div class="skeleton-row">
+                    <div class="skeleton-cell skeleton-cell-sm"></div>
+                    <div class="skeleton-cell skeleton-cell-md"></div>
+                    <div class="skeleton-cell skeleton-cell-md"></div>
+                    <div class="skeleton-cell skeleton-cell-sm"></div>
+                    <div class="skeleton-cell skeleton-cell-sm"></div>
+                </div>
+            }
+        </div>
+    }
+    else if (orders.Length == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#8c9196" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <h3>No orders yet</h3>
+            <p>Orders will appear here once customers complete checkout.</p>
+            <a href="/" class="btn-primary">Browse Products</a>
+        </div>
+    }
+    else
+    {
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Customer</th>
+                        <th>Email</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in orders)
+                    {
+                        <tr class="table-row-hover" @onclick="() => ViewOrder(order.Id)">
+                            <td><span class="order-id">#@order.Id</span></td>
+                            <td>@order.CustomerName</td>
+                            <td class="text-muted">@order.CustomerEmail</td>
+                            <td>@order.Items.Count item@(order.Items.Count != 1 ? "s" : "")</td>
+                            <td class="text-bold">$@order.TotalAmount.ToString("N2")</td>
+                            <td>
+                                <span class="status-badge status-@order.Status.ToLower()">
+                                    @order.Status
+                                </span>
+                            </td>
+                            <td class="text-muted">@order.CreatedAt.ToString("MMM dd, yyyy")</td>
+                            <td>
+                                <button class="btn-icon" title="View details" @onclick:stopPropagation="true" @onclick="() => ViewOrder(order.Id)">
+                                    →
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@code {
+    private Order[]? orders;
+
+    protected override async Task OnInitializedAsync()
+    {
+        orders = await OrderApi.GetAllAsync();
+    }
+
+    private void ViewOrder(int orderId)
+    {
+        Navigation.NavigateTo($"/orders/{orderId}");
+    }
+}

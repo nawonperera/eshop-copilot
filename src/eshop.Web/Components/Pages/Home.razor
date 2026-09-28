@@ -1,7 +1,144 @@
-﻿@page "/"
+@page "/"
+@rendermode InteractiveServer
+@inject ShopApiClient ShopApi
+@inject NavigationManager Navigation
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Home — eShop</PageTitle>
 
-<h1>Hello, world!</h1>
+<section class="page-section">
+    <header class="page-header">
+        <div>
+            <h1>Home</h1>
+            <p class="page-subtitle">Overview of your store</p>
+        </div>
+    </header>
 
-Welcome to your new app.
+    @if (products != null)
+    {
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon stat-icon-green">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#008060" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                </div>
+                <div>
+                    <div class="stat-value">@products.Count</div>
+                    <div class="stat-label">Products</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon stat-icon-cyan">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2c6ecb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                </div>
+                <div>
+                    <div class="stat-value">@cartItemCount</div>
+                    <div class="stat-label">In Cart</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon stat-icon-purple">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5c6ac4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </div>
+                <div>
+                    <div class="stat-value">$@totalCatalogValue.ToString("N0")</div>
+                    <div class="stat-label">Catalog value</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon stat-icon-amber">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b98900" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                </div>
+                <div>
+                    <div class="stat-value">$@(products.Count > 0 ? products.Max(p => p.Price).ToString("N0") : "0")</div>
+                    <div class="stat-label">Highest price</div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="section-header">
+        <h2 class="section-title">Products</h2>
+    </div>
+
+    @if (products == null)
+    {
+        <div class="skeleton-table">
+            @for (var i = 0; i < 3; i++)
+            {
+                <div class="skeleton-row">
+                    <div class="skeleton-cell skeleton-cell-md"></div>
+                    <div class="skeleton-cell skeleton-cell-sm"></div>
+                </div>
+            }
+        </div>
+    }
+    else if (products.Count == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#8c9196" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            </div>
+            <h3>No products yet</h3>
+            <p>Products will appear here once they are added to the catalog.</p>
+        </div>
+    }
+    else
+    {
+        <div class="product-grid">
+            @foreach (var product in products)
+            {
+                <div class="product-card" @onclick="() => ViewProduct(product.Id)">
+                    <div class="product-card-image">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#8c9196" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                    </div>
+                    <div class="product-card-body">
+                        <div class="product-card-name">@product.Name</div>
+                        <div class="product-card-desc">@product.Description</div>
+                        <div class="product-card-footer">
+                            <span class="product-card-price">$@product.Price.ToString("N2")</span>
+                            <button class="btn-primary" @onclick:stopPropagation="true" @onclick="() => AddToCart(product.Id)">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private List<Product>? products;
+    private int cartItemCount;
+    private decimal totalCatalogValue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        products = await ShopApi.GetProductsAsync();
+
+        if (products != null)
+        {
+            totalCatalogValue = products.Sum(p => p.Price);
+        }
+
+        try
+        {
+            var cart = await ShopApi.GetCartAsync("default");
+            cartItemCount = cart.Items.Sum(i => i.Quantity);
+        }
+        catch
+        {
+            cartItemCount = 0;
+        }
+    }
+
+    private async Task AddToCart(int productId)
+    {
+        await ShopApi.AddToCartAsync("default", productId);
+        cartItemCount++;
+    }
+
+    private void ViewProduct(int productId)
+    {
+        Navigation.NavigateTo($"/products/{productId}");
+    }
+}

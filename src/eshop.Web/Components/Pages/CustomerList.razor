@@ -1,0 +1,180 @@
+@page "/customers"
+@rendermode InteractiveServer
+@using eshop.Web.Models
+@using eshop.Web.Clients
+@inject CustomerApiClient ApiClient
+
+<PageTitle>Customers — eShop</PageTitle>
+
+<section class="page-section">
+    <header class="page-header">
+        <div>
+            <h1>Customers</h1>
+            <p class="page-subtitle">Manage your customer database</p>
+        </div>
+        <button class="btn-primary" @onclick="ShowAddForm">+ Add Customer</button>
+    </header>
+
+    @if (showForm)
+    {
+        <div class="form-card">
+            <h3 class="card-section-title">@(isEditing ? "Edit Customer" : "New Customer")</h3>
+            <EditForm Model="@currentCustomer" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">First Name</label>
+                        <InputText class="form-control" @bind-Value="currentCustomer.FirstName" placeholder="John" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Last Name</label>
+                        <InputText class="form-control" @bind-Value="currentCustomer.LastName" placeholder="Doe" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <InputText class="form-control" @bind-Value="currentCustomer.Email" placeholder="john@example.com" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Phone Number</label>
+                        <InputText class="form-control" @bind-Value="currentCustomer.PhoneNumber" placeholder="555-0100" />
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem;">
+                    <button type="submit" class="btn-success">Save Customer</button>
+                    <button type="button" class="btn-secondary" @onclick="HideForm">Cancel</button>
+                </div>
+            </EditForm>
+        </div>
+    }
+
+    @if (items == null)
+    {
+        <div class="skeleton-table">
+            @for (var i = 0; i < 4; i++)
+            {
+                <div class="skeleton-row">
+                    <div class="skeleton-cell skeleton-cell-md"></div>
+                    <div class="skeleton-cell skeleton-cell-md"></div>
+                    <div class="skeleton-cell skeleton-cell-md"></div>
+                    <div class="skeleton-cell skeleton-cell-sm"></div>
+                </div>
+            }
+        </div>
+    }
+    else if (items.Length == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#8c9196" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <h3>No customers yet</h3>
+            <p>Add your first customer to get started.</p>
+            <button class="btn-primary" @onclick="ShowAddForm">+ Add Customer</button>
+        </div>
+    }
+    else
+    {
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in items)
+                    {
+                        <tr>
+                            <td class="text-bold">@item.FirstName @item.LastName</td>
+                            <td class="text-muted">@item.Email</td>
+                            <td class="text-muted">@item.PhoneNumber</td>
+                            <td>
+                                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                                    <button class="btn-warning" @onclick="() => ShowEditForm(item)">Edit</button>
+                                    <button class="btn-danger" @onclick="() => DeleteCustomer(item.Id)">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@code {
+    private Customer[]? items;
+    private bool showForm = false;
+    private bool isEditing = false;
+    private Customer currentCustomer = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomers();
+    }
+
+    private async Task LoadCustomers()
+    {
+        items = await ApiClient.GetAllAsync();
+    }
+
+    private void ShowAddForm()
+    {
+        currentCustomer = new Customer();
+        isEditing = false;
+        showForm = true;
+    }
+
+    private void ShowEditForm(Customer customerToEdit)
+    {
+        currentCustomer = new Customer
+        {
+            Id = customerToEdit.Id,
+            FirstName = customerToEdit.FirstName,
+            LastName = customerToEdit.LastName,
+            Email = customerToEdit.Email,
+            PhoneNumber = customerToEdit.PhoneNumber
+        };
+        isEditing = true;
+        showForm = true;
+    }
+
+    private void HideForm()
+    {
+        showForm = false;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (isEditing)
+        {
+            var updated = await ApiClient.UpdateAsync(currentCustomer.Id, currentCustomer);
+            if (updated != null)
+            {
+                showForm = false;
+                await LoadCustomers();
+            }
+        }
+        else
+        {
+            var created = await ApiClient.CreateAsync(currentCustomer);
+            if (created != null)
+            {
+                showForm = false;
+                await LoadCustomers();
+            }
+        }
+    }
+
+    private async Task DeleteCustomer(Guid id)
+    {
+        await ApiClient.DeleteAsync(id);
+        await LoadCustomers();
+    }
+}

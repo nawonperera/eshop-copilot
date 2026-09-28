@@ -1,6 +1,122 @@
 @ApiService_HostAddress = http://localhost:5375
+@cartId = {{$guid}}
 
-GET {{ApiService_HostAddress}}/weatherforecast/
+### Get all products
+GET {{ApiService_HostAddress}}/api/products
 Accept: application/json
 
-###
+### Get a product by ID
+GET {{ApiService_HostAddress}}/api/products/1
+Accept: application/json
+
+### Get a non-existent product
+GET {{ApiService_HostAddress}}/api/products/99
+Accept: application/json
+
+### Create a new product
+POST {{ApiService_HostAddress}}/api/products
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Bluetooth Portable Speaker",
+  "description": "Waterproof portable bluetooth speaker with 12h battery life.",
+  "price": 59.99,
+  "imageUrl": "https://example.com/images/speaker.jpg"
+}
+
+### Update an existing product
+PUT {{ApiService_HostAddress}}/api/products/1
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": 1,
+  "name": "Wireless Noise-Canceling Headphones Pro",
+  "description": "Upgraded premium over-ear headphones with better active noise cancellation.",
+  "price": 329.99,
+  "imageUrl": "https://example.com/images/headphones-pro.jpg"
+}
+
+### Delete a product
+DELETE {{ApiService_HostAddress}}/api/products/2
+
+### Get all orders
+GET {{ApiService_HostAddress}}/api/orders
+Accept: application/json
+
+### Get an order by ID
+GET {{ApiService_HostAddress}}/api/orders/1
+Accept: application/json
+
+### Get a non-existent order
+GET {{ApiService_HostAddress}}/api/orders/99
+Accept: application/json
+
+### Create a new order
+POST {{ApiService_HostAddress}}/api/orders
+Content-Type: application/json
+Accept: application/json
+
+{
+  "customerName": "Charlie",
+  "status": "Processing",
+  "totalAmount": 250.00
+}
+
+### Update an existing order
+PUT {{ApiService_HostAddress}}/api/orders/1
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": 1,
+  "customerName": "Alice",
+  "status": "Delivered",
+  "totalAmount": 99.99
+}
+
+### Delete an order
+DELETE {{ApiService_HostAddress}}/api/orders/2
+
+### =========================================
+### CHECKOUT WORKFLOW INTEGRATION TEST
+### =========================================
+
+### 1. Create/Retrieve Cart
+# @name CreateCart
+GET {{ApiService_HostAddress}}/api/cart/{{cartId}}
+Accept: application/json
+
+### 2. Add Product into Cart
+# @name AddProduct
+POST {{ApiService_HostAddress}}/api/cart/{{cartId}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "productId": 1,
+  "quantity": 2
+}
+
+### 3. Execute Checkout Process
+# @name Checkout
+POST {{ApiService_HostAddress}}/api/cart/{{cartId}}/checkout
+Content-Type: application/json
+Accept: application/json
+
+{
+  "customerName": "Alice Testing",
+  "customerEmail": "alice@example.com"
+}
+
+### 4. Validate Cart is Cleared
+# @name VerifyCartCleared
+GET {{ApiService_HostAddress}}/api/cart/{{cartId}}
+Accept: application/json
+
+### 5. Validate Order Created
+# @name VerifyOrder
+# Extracts the created order ID directly from the previous response body (Visual Studio syntax)
+GET {{ApiService_HostAddress}}/api/orders/{{Checkout.response.body.$.id}}
+Accept: application/json
