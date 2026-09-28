@@ -1,0 +1,109 @@
+@page "/products/{id:int}"
+@rendermode InteractiveServer
+@inject ShopApiClient ShopApi
+@inject NavigationManager Navigation
+
+<PageTitle>@(product?.Name ?? "Product") — eShop</PageTitle>
+
+<section class="page-section">
+    @if (isLoading)
+    {
+        <div class="detail-skeleton">
+            <div class="skeleton-line skeleton-title"></div>
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line skeleton-short"></div>
+        </div>
+    }
+    else if (product is null)
+    {
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#8c9196" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <h3>Product not found</h3>
+            <p>The product you're looking for doesn't exist.</p>
+            <a href="/" class="btn-primary">← Browse Products</a>
+        </div>
+    }
+    else
+    {
+        <header class="detail-header">
+            <a href="/" class="btn-back">← Back to Products</a>
+        </header>
+
+        <div class="product-detail-layout">
+            <div class="product-image-area">
+                <div class="product-image-placeholder">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#8c9196" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                </div>
+            </div>
+
+            <div class="product-info-area">
+                <h1 class="product-detail-name">@product.Name</h1>
+                <p class="product-detail-description">@product.Description</p>
+
+                <div class="product-detail-price">
+                    $@product.Price.ToString("N2")
+                </div>
+
+                <div class="product-detail-actions">
+                    @if (addedToCart)
+                    {
+                        <div class="added-feedback">
+                            <span class="check-icon">✓</span> Added to cart!
+                        </div>
+                        <a href="/cart" class="btn-secondary">View Cart →</a>
+                    }
+                    else
+                    {
+                        <button class="btn-primary btn-lg" @onclick="AddToCart" disabled="@isAdding">
+                            @if (isAdding)
+                            {
+                                <span class="spinner"></span>
+                                <span>Adding...</span>
+                            }
+                            else
+                            {
+                                <span>Add to Cart</span>
+                            }
+                        </button>
+                    }
+                </div>
+
+                <div class="product-meta">
+                    <div class="meta-item">
+                        <span class="meta-label">Product ID</span>
+                        <span class="meta-value">#@product.Id</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Availability</span>
+                        <span class="meta-value status-badge status-shipped">In Stock</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Product? product;
+    private bool isLoading = true;
+    private bool isAdding;
+    private bool addedToCart;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var products = await ShopApi.GetProductsAsync();
+        product = products.FirstOrDefault(p => p.Id == Id);
+        isLoading = false;
+    }
+
+    private async Task AddToCart()
+    {
+        isAdding = true;
+        await ShopApi.AddToCartAsync("default", product!.Id);
+        isAdding = false;
+        addedToCart = true;
+    }
+}
