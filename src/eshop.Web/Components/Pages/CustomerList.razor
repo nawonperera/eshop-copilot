@@ -1,0 +1,161 @@
+@page "/customers"
+@rendermode InteractiveServer
+@using eshop.Web.Models
+@using eshop.Web.Clients
+@inject CustomerApiClient ApiClient
+
+<PageTitle>Customer Catalog</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Customer Catalog</h3>
+    <button class="btn btn-primary" @onclick="ShowAddForm">Add New Customer</button>
+</div>
+
+@if (showForm)
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">@(isEditing ? "Edit Customer" : "Add New Customer")</h5>
+            <EditForm Model="@currentCustomer" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">First Name</label>
+                        <InputText class="form-control" @bind-Value="currentCustomer.FirstName" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Last Name</label>
+                        <InputText class="form-control" @bind-Value="currentCustomer.LastName" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <InputText class="form-control" @bind-Value="currentCustomer.Email" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Phone Number</label>
+                        <InputText class="form-control" @bind-Value="currentCustomer.PhoneNumber" />
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-success">Save</button>
+                    <button type="button" class="btn btn-secondary" @onclick="HideForm">Cancel</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@if (items == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (items.Length == 0)
+{
+    <p><em>No customers found.</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Email</th>
+                <th>Phone Number</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in items)
+            {
+                <tr>
+                    <td>@item.Id</td>
+                    <td>@item.FirstName</td>
+                    <td>@item.LastName</td>
+                    <td>@item.Email</td>
+                    <td>@item.PhoneNumber</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm me-2" @onclick="() => ShowEditForm(item)">Edit</button>
+                        <button class="btn btn-danger btn-sm" @onclick="() => DeleteCustomer(item.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private Customer[]? items;
+    private bool showForm = false;
+    private bool isEditing = false;
+    private Customer currentCustomer = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomers();
+    }
+
+    private async Task LoadCustomers()
+    {
+        items = await ApiClient.GetAllAsync();
+    }
+
+    private void ShowAddForm()
+    {
+        currentCustomer = new Customer();
+        isEditing = false;
+        showForm = true;
+    }
+
+    private void ShowEditForm(Customer customerToEdit)
+    {
+        // Create a copy so we don't mutate the list item directly until saved
+        currentCustomer = new Customer
+        {
+            Id = customerToEdit.Id,
+            FirstName = customerToEdit.FirstName,
+            LastName = customerToEdit.LastName,
+            Email = customerToEdit.Email,
+            PhoneNumber = customerToEdit.PhoneNumber
+        };
+        isEditing = true;
+        showForm = true;
+    }
+
+    private void HideForm()
+    {
+        showForm = false;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (isEditing)
+        {
+            var updated = await ApiClient.UpdateAsync(currentCustomer.Id, currentCustomer);
+            if (updated != null)
+            {
+                showForm = false;
+                await LoadCustomers();
+            }
+        }
+        else
+        {
+            var created = await ApiClient.CreateAsync(currentCustomer);
+            if (created != null)
+            {
+                showForm = false;
+                await LoadCustomers();
+            }
+        }
+    }
+
+    private async Task DeleteCustomer(Guid id)
+    {
+        await ApiClient.DeleteAsync(id);
+        await LoadCustomers();
+    }
+}

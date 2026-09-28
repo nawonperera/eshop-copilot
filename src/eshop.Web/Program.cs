@@ -18,6 +18,11 @@ builder.Services.AddHttpClient<ShopApiClient>(client =>
     client.BaseAddress = new Uri("http://apiservice");
 });
 
+builder.Services.AddHttpClient<CustomerApiClient>(client => 
+{
+    client.BaseAddress = new Uri("http://apiservice");
+});
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
